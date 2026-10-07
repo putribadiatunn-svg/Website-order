@@ -6,7 +6,7 @@
  * Jalankan: npm run seed   (atau: npm run reset-db untuk mulai dari nol)
  */
 import 'dotenv/config';
-import { db, seedDefaultSettings } from './db.js';
+import { db, seedDefaultSettings, transaction } from './db.js';
 
 const SAMPLE_PRODUCTS = [
   {
@@ -133,9 +133,9 @@ const insert = db.prepare(`
     updated_at = datetime('now')
 `);
 
-db.transaction(() => {
+transaction(() => {
   for (const p of SAMPLE_PRODUCTS) insert.run(p);
-})();
+});
 
 seedDefaultSettings();
 

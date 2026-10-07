@@ -9,7 +9,7 @@
  *  4. commit. Gagal di langkah mana pun -> rollback total.
  */
 import { Router } from 'express';
-import { db, publicSettings, getSetting } from '../db.js';
+import { db, publicSettings, getSetting, transaction } from '../db.js';
 import { validateOrder } from '../lib/validate.js';
 import { orderNotificationLink, statusLabel } from '../lib/whatsapp.js';
 
@@ -22,7 +22,7 @@ export function deriveStockStatus(qty) {
   return 'tersedia';
 }
 
-const createOrderTx = db.transaction((data, settings) => {
+const createOrderTx = (data, settings) => transaction(() => {
   const items = [];
   let subtotal = 0;
 

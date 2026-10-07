@@ -1,12 +1,16 @@
 /**
  * db.js — koneksi SQLite + migrasi schema.
  *
+ * Memakai `node:sqlite` (modul bawaan Node.js 22.5+) — tanpa dependency native,
+ * tanpa proses compile, sehingga instalasi selalu berhasil di environment
+ * apapun (termasuk Railway).
+ *
  * SQLite dipilih karena: nol konfigurasi, cukup untuk skala UMKM,
  * transaksi ACID menjaga stok tidak minus saat order bersamaan.
  * Untuk naik kelas ke Postgres, cukup ganti modul ini (query ditulis
  * dengan SQL standar).
  */
-import Database from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,11 +22,28 @@ const DB_PATH = path.join(DATA_DIR, 'shop.db');
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
-export const db = new Database(DB_PATH);
+export const db = new DatabaseSync(DB_PATH);
 // Mode WAL: baca tidak memblokir tulis; cocok untuk traffic order.
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
-db.pragma('busy_timeout = 5000');
+db.exec('PRAGMA journal_mode = WAL');
+db.exec('PRAGMA foreign_keys = ON');
+db.exec('PRAGMA busy_timeout = 5000');
+
+/**
+ * Helper transaksi (pengganti db.transaction() milik better-sqlite3).
+ * Memakai BEGIN IMMEDIATE agar dua order bersamaan tidak bisa
+ * mengurangi stok yang sama (mencegah oversell).
+ */
+export function transaction(fn) {
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const result = fn();
+    db.exec('COMMIT');
+    return result;
+  } catch (e) {
+    try { db.exec('ROLLBACK'); } catch { /* abaikan */ }
+    throw e;
+  }
+}
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS products (

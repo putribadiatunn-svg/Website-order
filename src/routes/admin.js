@@ -6,7 +6,7 @@
  * via HTTPS; pertimbangkan session login penuh bila dibutuhkan.
  */
 import { Router } from 'express';
-import { db, getSetting, setSetting } from '../db.js';
+import { db, getSetting, setSetting, transaction } from '../db.js';
 import { deriveStockStatus } from './orders.js';
 import { statusLabel } from '../lib/whatsapp.js';
 
@@ -56,7 +56,7 @@ adminRouter.patch('/orders/:id/status', (req, res) => {
   if (!order) return res.status(404).json({ error: 'Pesanan tidak ditemukan.' });
   if (order.status === status) return res.json({ order });
 
-  const tx = db.transaction(() => {
+  transaction(() => {
     // Batalkan -> kembalikan stok (hanya bila sebelumnya belum dibatalkan)
     if (status === 'dibatalkan' && order.status !== 'dibatalkan') {
       const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
@@ -79,7 +79,6 @@ adminRouter.patch('/orders/:id/status', (req, res) => {
       `INSERT INTO status_history (order_id, old_status, new_status) VALUES (?, ?, ?)`
     ).run(order.id, order.status, status);
   });
-  tx();
 
   const updated = db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id);
   res.json({ order: { ...updated, status_label: statusLabel(updated.status) } });
@@ -129,7 +128,7 @@ adminRouter.post('/products', (req, res) => {
       b.is_active === false || b.is_active === 0 ? 0 : 1,
       b.is_featured ? 1 : 0, String(b.badge || '')
     );
-    res.status(201).json({ product: db.prepare(`SELECT ${PRODUCT_FIELDS} FROM products WHERE id = ?`).get(r.lastInsertRowid) });
+    res.status(201).json({ product: db.prepare(`SELECT ${PRODUCT_FIELDS} FROM products WHERE id = ?`).get(Number(r.lastInsertRowid)) });
   } catch (e) {
     if (String(e.message).includes('UNIQUE')) {
       return res.status(400).json({ error: 'Slug sudah dipakai produk lain.' });

@@ -9,7 +9,7 @@ Guest checkout tanpa daftar akun, notifikasi pesanan via WhatsApp, manajemen sto
 |---|---|---|
 | Runtime | Node.js 20+ | Stabil, satu bahasa untuk backend |
 | Backend | Express 4 | Minimal, mudah dipahami |
-| Database | SQLite (better-sqlite3) | Nol konfigurasi, transaksi ACID untuk keamanan stok |
+| Database | SQLite via `node:sqlite` (bawaan Node.js) | Nol konfigurasi, tanpa native dependency — instalasi selalu berhasil, transaksi ACID untuk keamanan stok |
 | Frontend | HTML + CSS + JS vanilla (tanpa build) | Cepat di HP, deploy cukup `node server.js` |
 | Cart | localStorage | Guest checkout, tanpa akun |
 
