@@ -105,6 +105,24 @@ Buat token acak: `node -e "console.log(require('crypto').randomBytes(32).toStrin
 
 Test validasi: stok melebihi (tolak), HP salah format (tolak), delivery tanpa alamat (tolak).
 
+## Deploy ke Internet (URL Publik)
+
+> Catatan: GitHub Pages **tidak bisa** dipakai — ia hanya hosting file statis,
+> sedangkan website ini butuh backend Node.js + database SQLite.
+> Cara yang benar: hubungkan repo GitHub ke layanan hosting (gratis), setiap
+> `git push` otomatis ter-deploy.
+
+**Railway (direkomendasikan):**
+1. Daftar di railway.app dengan akun GitHub → New Project → Deploy from GitHub repo → pilih `Website-order`.
+2. Di tab Variables, isi: `ADMIN_TOKEN` (string acak panjang), `ADMIN_WHATSAPP` (`628…`), `SHOP_NAME`, `PICKUP_ADDRESS`.
+3. Tambah Volume: mount path `/app/data`, lalu set variable `DATA_DIR=/app/data` (agar database tidak hilang saat re-deploy).
+4. Railway memberi URL publik `https://….up.railway.app` — buka dari HP.
+5. Jalankan sekali via Railway shell/CLI: `npm run seed` untuk isi produk contoh.
+
+**Render (alternatif):** New → Web Service → connect repo → Build `npm install`, Start `npm start`,
+isi Environment Variables seperti di atas, tambah Disk untuk `/opt/render/project/src/data`
+dengan `DATA_DIR` menunjuk ke sana.
+
 ## API Ringkas
 
 - `GET /api/products`, `GET /api/products?category=dimsum`, `GET /api/products/:slug`
