@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Katalog Produk — Dimsum Enak</title>
+<meta name="description" content="Lihat semua dimsum dan olahan ayam yang tersedia. Pilih, masukkan keranjang, pesan dengan mudah.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%237b1f1f'/><text x='50' y='68' text-anchor='middle' font-size='52' font-weight='800' fill='white' font-family='system-ui'>D</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+
+<main>
+  <div class="wrap">
+    <section class="section">
+      <h1 style="margin:0 0 4px">Katalog Produk</h1>
+      <p style="color:var(--text-soft);margin:0 0 16px">Pilih produk favoritmu, tekan "Tambah".</p>
+      <div class="chips" id="category-chips"><span class="loading">Memuat…</span></div>
+      <div class="grid-products" id="product-grid"><div class="loading">Memuat produk…</div></div>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script type="module">
+import { api, renderChrome, productCard } from '/js/app.js';
+import { addToCart } from '/js/cart.js';
+
+await renderChrome('katalog');
+const params = new URLSearchParams(location.search);
+let activeCat = params.get('category') || '';
+
+const labels = { dimsum: 'Dimsum', 'olahan-ayam': 'Olahan Ayam', paket: 'Paket', lainnya: 'Lainnya' };
+
+async function loadCategories() {
+  try {
+    const { categories } = await api('/api/products/categories');
+    const el = document.getElementById('category-chips');
+    el.innerHTML =
+      `<button class="chip ${!activeCat ? 'active' : ''}" data-cat="">Semua</button>` +
+      categories.map((c) =>
+        `<button class="chip ${activeCat === c.category ? 'active' : ''}" data-cat="${c.category}">${labels[c.category] || c.category}</button>`
+      ).join('');
+  } catch { /* abaikan */ }
+}
+
+async function loadProducts() {
+  const grid = document.getElementById('product-grid');
+  grid.innerHTML = '<div class="loading">Memuat produk…</div>';
+  try {
+    const q = activeCat ? `?category=${encodeURIComponent(activeCat)}` : '';
+    const { products } = await api('/api/products' + q);
+    grid.innerHTML = products.length
+      ? products.map(productCard).join('')
+      : '<div class="empty"><p>Belum ada produk di kategori ini.</p></div>';
+  } catch (e) {
+    grid.innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+  }
+}
+
+document.getElementById('category-chips').addEventListener('click', (e) => {
+  const chip = e.target.closest('[data-cat]');
+  if (!chip) return;
+  activeCat = chip.dataset.cat;
+  document.querySelectorAll('#category-chips .chip').forEach((c) =>
+    c.classList.toggle('active', c.dataset.cat === activeCat));
+  loadProducts();
+});
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-add]');
+  if (!btn || btn.disabled) return;
+  addToCart(Number(btn.dataset.add), 1);
+  btn.textContent = '✓ Ditambah';
+  setTimeout(() => (btn.textContent = 'Tambah'), 1200);
+});
+
+await loadCategories();
+await loadProducts();
+</script>
+</body>
+</html>

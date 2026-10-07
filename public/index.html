@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dimsum Enak — Pesan Dimsum & Olahan Ayam Online</title>
+<meta name="description" content="Pesan dimsum ayam, hakau, dan olahan ayam favoritmu dengan mudah. Tanpa daftar akun, bisa pickup atau delivery.">
+<meta property="og:title" content="Dimsum Enak — Pesan Dimsum & Olahan Ayam Online">
+<meta property="og:description" content="Pesan dimsum favoritmu dengan mudah lewat HP. Tanpa daftar akun.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%237b1f1f'/><text x='50' y='68' text-anchor='middle' font-size='52' font-weight='800' fill='white' font-family='system-ui'>D</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <h1 id="hero-title">Dimsum hangat, langsung pesan dari HP</h1>
+      <p id="hero-sub">Dimsum ayam kukus dan olahan ayam favorit keluarga — pesan tanpa ribet, tanpa daftar akun.</p>
+      <div class="hero-cta">
+        <a class="btn btn-accent btn-block" href="/katalog">Pesan Sekarang</a>
+        <a class="btn btn-wa btn-block" href="#unggulan">Lihat Produk</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="unggulan">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>⭐ Produk Unggulan</h2>
+        <a href="/katalog">Lihat semua →</a>
+      </div>
+      <div class="grid-products" id="featured-grid"><div class="loading">Memuat produk…</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="section-head"><h2>Kategori</h2></div>
+      <div class="chips" id="category-chips"></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap">
+      <div class="wa-cta">
+        <h2>Masih bingung mau pilih yang mana?</h2>
+        <p>Tanya kami langsung melalui WhatsApp — kami bantu pilihkan.</p>
+        <a class="btn btn-wa btn-block" id="wa-cta-btn" href="#" target="_blank" rel="noopener">💬 Tanya via WhatsApp</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap faq">
+      <div class="section-head"><h2>Pertanyaan Umum</h2></div>
+      <details>
+        <summary>Bagaimana cara memesan?</summary>
+        <p>Pilih produk → tekan "Tambah" → buka keranjang → isi nama, nomor WhatsApp, dan pilih Pickup atau Delivery → konfirmasi. Selesai, tanpa perlu daftar akun.</p>
+      </details>
+      <details>
+        <summary>Bagaimana saya membayar?</summary>
+        <p>Untuk saat ini tersedia COD (bayar di tempat) dan Transfer. Pilihan pembayaran tampil saat checkout.</p>
+      </details>
+      <details>
+        <summary>Apakah bisa pickup langsung?</summary>
+        <p>Bisa. Pilih metode "Pickup" saat checkout, lalu datang ke lokasi kami sesuai alamat yang tertera.</p>
+      </details>
+      <details>
+        <summary>Bagaimana cara bertanya stok produk?</summary>
+        <p>Buka halaman produk, lalu tekan tombol "Tanya Stok via WhatsApp" — pesan sudah terisi otomatis, tinggal kirim.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script type="module">
+import { api, renderChrome, productCard, loadSettings } from '/js/app.js';
+import { addToCart } from '/js/cart.js';
+
+await renderChrome('home');
+const s = await loadSettings();
+document.getElementById('hero-title').textContent = `${s.shop_name} — dimsum hangat, langsung pesan dari HP`;
+document.getElementById('wa-cta-btn').href = s.whatsapp_link || '#';
+
+try {
+  const { products } = await api('/api/products?featured=1');
+  const grid = document.getElementById('featured-grid');
+  grid.innerHTML = products.length
+    ? products.map(productCard).join('')
+    : '<div class="empty"><p>Belum ada produk unggulan.</p></div>';
+} catch (e) {
+  document.getElementById('featured-grid').innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+}
+
+try {
+  const { categories } = await api('/api/products/categories');
+  const labels = { dimsum: 'Dimsum', 'olahan-ayam': 'Olahan Ayam', paket: 'Paket', lainnya: 'Lainnya' };
+  document.getElementById('category-chips').innerHTML = categories
+    .map((c) => `<a class="chip" href="/katalog?category=${encodeURIComponent(c.category)}">${labels[c.category] || c.category} (${c.count})</a>`)
+    .join('');
+} catch { /* abaikan */ }
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-add]');
+  if (!btn || btn.disabled) return;
+  addToCart(Number(btn.dataset.add), 1);
+  btn.textContent = '✓ Ditambah';
+  setTimeout(() => (btn.textContent = 'Tambah'), 1200);
+});
+</script>
+</body>
+</html>

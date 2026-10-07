@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Detail Produk — Dimsum Enak</title>
+<meta name="description" content="Lihat detail produk, harga, dan stok. Tambah ke keranjang atau tanya via WhatsApp.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%237b1f1f'/><text x='50' y='68' text-anchor='middle' font-size='52' font-weight='800' fill='white' font-family='system-ui'>D</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+
+<main>
+  <div class="wrap">
+    <section class="section">
+      <div id="detail"><div class="loading">Memuat produk…</div></div>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script type="module">
+import { api, renderChrome, formatRupiah, stockBadge, productImage, escapeHtml, escapeAttr, loadSettings } from '/js/app.js';
+import { addToCart } from '/js/cart.js';
+
+await renderChrome('katalog');
+const slug = new URLSearchParams(location.search).get('slug');
+const el = document.getElementById('detail');
+
+if (!slug) {
+  el.innerHTML = '<div class="alert alert-error">Produk tidak ditemukan.</div>';
+} else {
+  try {
+    const { product: p } = await api('/api/products/' + encodeURIComponent(slug));
+    const s = await loadSettings();
+    document.title = `${p.name} — ${s.shop_name}`;
+    const st = stockBadge(p);
+    const habis = st.cls === 'habis';
+    const waTanya = `https://wa.me/${(s.admin_whatsapp || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Halo, saya ingin bertanya tentang produk ${p.name}.`)}`;
+    const waStok = `https://wa.me/${(s.admin_whatsapp || '').replace(/\D/g, '')}?text=${encodeURIComponent(`Halo, saya mau bertanya mengenai stok ${p.name}. Apakah masih tersedia?`)}`;
+
+    el.innerHTML = `
+    <div class="product-detail">
+      <div class="product-img">${productImage(p, p.name)}</div>
+      <div class="product-info">
+        <h1>${escapeHtml(p.name)}</h1>
+        <div>
+          ${p.badge && !habis ? `<span class="badge">${escapeAttr(p.badge)}</span> ` : ''}
+          ${habis ? '<span class="badge habis">Habis</span>' : ''}
+          <span class="stock ${st.cls}">● ${st.text}${!habis && p.stock_quantity <= 50 ? ` (${p.stock_quantity} pcs)` : ''}</span>
+        </div>
+        <div class="product-price">${formatRupiah(p.price)}</div>
+        <p>${escapeHtml(p.description)}</p>
+        <div class="qty-row">
+          <button class="qty-btn" id="qty-minus" aria-label="Kurangi jumlah">−</button>
+          <span class="qty-val" id="qty-val">1</span>
+          <button class="qty-btn" id="qty-plus" aria-label="Tambah jumlah">+</button>
+        </div>
+        <div class="product-actions">
+          <button class="btn btn-primary btn-block" id="btn-add" ${habis ? 'disabled' : ''}>${habis ? 'Stok Habis' : 'Tambah ke Keranjang'}</button>
+          <button class="btn btn-accent btn-block" id="btn-buy" ${habis ? 'disabled' : ''}>Pesan Sekarang</button>
+          <a class="btn btn-wa btn-block" href="${escapeAttr(waTanya)}" target="_blank" rel="noopener">💬 Tanya Produk</a>
+          <a class="btn btn-outline btn-block" href="${escapeAttr(waStok)}" target="_blank" rel="noopener">📦 Tanya Stok</a>
+          <a class="btn btn-muted btn-block" href="/katalog">← Kembali ke Katalog</a>
+        </div>
+      </div>
+    </div>`;
+
+    let qty = 1;
+    const maxQty = Math.max(1, Math.min(p.stock_quantity, 100));
+    const val = document.getElementById('qty-val');
+    document.getElementById('qty-minus').onclick = () => { qty = Math.max(1, qty - 1); val.textContent = qty; };
+    document.getElementById('qty-plus').onclick = () => {
+      if (qty + 1 > p.stock_quantity) { alert(`Stok tersedia ${p.stock_quantity} pcs.`); return; }
+      qty = Math.min(maxQty, qty + 1); val.textContent = qty;
+    };
+    document.getElementById('btn-add').onclick = () => {
+      addToCart(p.id, qty);
+      location.href = '/keranjang';
+    };
+    document.getElementById('btn-buy').onclick = () => {
+      addToCart(p.id, qty);
+      location.href = '/checkout';
+    };
+  } catch (e) {
+    el.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+  }
+}
+</script>
+</body>
+</html>

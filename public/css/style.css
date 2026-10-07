@@ -1,0 +1,295 @@
+/**
+ * style.css — theme "Dimsum Enak": hangat, menggugah selera, bersih.
+ * Mobile-first. Semua tombol sentuh minimal 48px.
+ */
+:root {
+  --bg: #fdf6ec;            /* cream / warm off-white */
+  --bg-card: #ffffff;
+  --primary: #7b1f1f;       /* maroon / deep red */
+  --primary-dark: #5f1414;
+  --accent: #e8930c;        /* warm orange */
+  --gold: #c99a2b;          /* muted gold */
+  --text: #3e2f25;          /* dark brown */
+  --text-soft: #6f5d4d;
+  --border: #ead9c2;
+  --success: #2e7d32;
+  --danger: #c62828;
+  --radius: 14px;
+  --shadow: 0 2px 10px rgba(123, 31, 31, 0.08);
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.55;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: var(--primary); }
+button { font-family: inherit; }
+
+/* ---------- layout ---------- */
+.wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+main { flex: 1; padding-bottom: 48px; }
+
+/* ---------- header ---------- */
+.site-header {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 50;
+}
+.site-header .wrap {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 64px; padding-top: 8px; padding-bottom: 8px;
+}
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+.brand-mark {
+  width: 42px; height: 42px; border-radius: 12px; flex: none;
+  background: var(--primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 22px;
+}
+.brand-name { font-weight: 800; font-size: 19px; line-height: 1.2; }
+.brand-tag { font-size: 12.5px; color: var(--text-soft); }
+.site-nav { display: none; gap: 4px; margin-left: 8px; }
+.site-nav a {
+  text-decoration: none; color: var(--text); font-weight: 600;
+  padding: 12px 14px; border-radius: 10px; min-height: 48px;
+  display: inline-flex; align-items: center;
+}
+.site-nav a:hover, .site-nav a.active { background: #f7ead6; color: var(--primary); }
+.header-actions { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.cart-btn {
+  position: relative; text-decoration: none; color: var(--text);
+  border: 1px solid var(--border); background: var(--bg-card);
+  min-width: 48px; min-height: 48px; border-radius: 12px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  font-weight: 700; padding: 0 14px;
+}
+.cart-count {
+  position: absolute; top: -8px; right: -8px;
+  background: var(--primary); color: #fff; font-size: 13px; font-weight: 700;
+  min-width: 26px; height: 26px; border-radius: 13px;
+  display: flex; align-items: center; justify-content: center; padding: 0 6px;
+}
+.menu-btn {
+  border: 1px solid var(--border); background: var(--bg-card); border-radius: 12px;
+  min-width: 48px; min-height: 48px; font-size: 22px; cursor: pointer; color: var(--text);
+}
+.mobile-nav {
+  display: none; border-top: 1px solid var(--border); background: var(--bg-card);
+}
+.mobile-nav.open { display: block; }
+.mobile-nav a {
+  display: block; padding: 14px 20px; text-decoration: none; color: var(--text);
+  font-weight: 600; font-size: 18px; border-bottom: 1px solid var(--border); min-height: 52px;
+}
+@media (min-width: 760px) {
+  .site-nav { display: flex; }
+  .menu-btn, .mobile-nav { display: none !important; }
+}
+
+/* ---------- tombol ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 52px; padding: 12px 22px; border-radius: var(--radius);
+  font-size: 18px; font-weight: 700; text-decoration: none; cursor: pointer;
+  border: 2px solid transparent; text-align: center;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-accent { background: var(--accent); color: #3a2404; }
+.btn-outline { background: var(--bg-card); color: var(--primary); border-color: var(--primary); }
+.btn-wa { background: #1faa55; color: #fff; }
+.btn-muted { background: #efe6d4; color: var(--text); }
+.btn-block { width: 100%; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-sm { min-height: 44px; font-size: 16px; padding: 8px 16px; }
+
+/* ---------- hero ---------- */
+.hero {
+  background: linear-gradient(135deg, #7b1f1f 0%, #a8321f 60%, #c65a1e 100%);
+  color: #fff; border-radius: 0 0 28px 28px; overflow: hidden;
+}
+.hero .wrap { padding-top: 36px; padding-bottom: 40px; }
+.hero h1 { font-size: 30px; margin: 0 0 10px; line-height: 1.25; }
+.hero p { font-size: 18px; margin: 0 0 22px; opacity: 0.95; max-width: 34em; }
+.hero-cta { display: flex; flex-direction: column; gap: 12px; }
+.hero-cta .btn-wa { background: rgba(255,255,255,0.16); border: 2px solid #fff; }
+@media (min-width: 760px) {
+  .hero h1 { font-size: 40px; }
+  .hero-cta { flex-direction: row; }
+  .hero-cta .btn { width: auto; }
+}
+
+/* ---------- section ---------- */
+.section { padding-top: 32px; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.section-head h2 { font-size: 23px; margin: 0; }
+.section-head a { font-weight: 700; white-space: nowrap; }
+
+/* ---------- kartu produk ---------- */
+.grid-products {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(2, 1fr);
+}
+@media (min-width: 760px) { .grid-products { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1024px) { .grid-products { grid-template-columns: repeat(4, 1fr); } }
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+  display: flex; flex-direction: column;
+}
+.card-img { aspect-ratio: 1 / 1; background: #f3e7d3; position: relative; }
+.card-img svg, .card-img img { width: 100%; height: 100%; object-fit: cover; }
+.card-body { padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.card-name { font-weight: 700; font-size: 16.5px; margin: 0; line-height: 1.35; }
+.card-name a { color: inherit; text-decoration: none; }
+.card-desc { font-size: 14px; color: var(--text-soft); margin: 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-price { font-weight: 800; font-size: 18px; color: var(--primary); }
+.card-foot { margin-top: auto; padding-top: 8px; display: flex; gap: 8px; align-items: center; }
+.card-foot .btn { flex: 1; min-height: 48px; font-size: 16px; padding: 8px 10px; }
+.badge {
+  display: inline-block; font-size: 12.5px; font-weight: 700;
+  padding: 4px 10px; border-radius: 20px; background: #f7ead6; color: var(--primary);
+}
+.badge.habis { background: #f3d9d9; color: var(--danger); }
+.badge.baru { background: #dff0e0; color: var(--success); }
+.stock { font-size: 13.5px; font-weight: 600; }
+.stock.tersedia { color: var(--success); }
+.stock.terbatas { color: #b26a00; }
+.stock.habis { color: var(--danger); }
+
+/* ---------- kategori chips ---------- */
+.chips { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 12px; -webkit-overflow-scrolling: touch; }
+.chip {
+  flex: none; border: 2px solid var(--border); background: var(--bg-card);
+  border-radius: 24px; padding: 10px 20px; min-height: 48px;
+  font-size: 16px; font-weight: 700; color: var(--text); cursor: pointer;
+}
+.chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+/* ---------- detail produk ---------- */
+.product-detail { display: grid; gap: 20px; }
+@media (min-width: 760px) { .product-detail { grid-template-columns: 1fr 1fr; } }
+.product-img { border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); background: #f3e7d3; }
+.product-info h1 { font-size: 26px; margin: 0 0 8px; }
+.product-price { font-size: 26px; font-weight: 800; color: var(--primary); margin: 8px 0; }
+.qty-row { display: flex; align-items: center; gap: 14px; margin: 16px 0; }
+.qty-btn {
+  width: 56px; height: 56px; border-radius: 14px; font-size: 26px; font-weight: 800;
+  border: 2px solid var(--primary); background: var(--bg-card); color: var(--primary); cursor: pointer;
+}
+.qty-val { font-size: 24px; font-weight: 800; min-width: 48px; text-align: center; }
+.product-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+
+/* ---------- keranjang ---------- */
+.cart-item {
+  display: flex; gap: 12px; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px; margin-bottom: 12px; align-items: center;
+}
+.cart-thumb { width: 72px; height: 72px; border-radius: 10px; background: #f3e7d3; flex: none; overflow: hidden; }
+.cart-thumb svg { width: 100%; height: 100%; }
+.cart-info { flex: 1; min-width: 0; }
+.cart-name { font-weight: 700; margin: 0 0 2px; font-size: 16px; }
+.cart-price { color: var(--text-soft); font-size: 14.5px; }
+.cart-sub { font-weight: 800; color: var(--primary); }
+.qty-mini { display: flex; align-items: center; gap: 8px; }
+.qty-mini button {
+  width: 44px; height: 44px; border-radius: 10px; font-size: 22px; font-weight: 800;
+  border: 2px solid var(--primary); background: var(--bg-card); color: var(--primary); cursor: pointer;
+}
+.cart-remove { background: none; border: none; color: var(--danger); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px; min-height: 44px; }
+.cart-total-box {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 18px; margin-top: 8px;
+}
+.total-row { display: flex; justify-content: space-between; font-size: 18px; margin-bottom: 6px; }
+.total-row.grand { font-weight: 800; font-size: 22px; color: var(--primary); border-top: 1px solid var(--border); padding-top: 10px; margin-top: 10px; }
+
+/* ---------- form ---------- */
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; font-weight: 700; margin-bottom: 8px; font-size: 17px; }
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%; min-height: 54px; border: 2px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; font-size: 17px; font-family: inherit; background: #fff; color: var(--text);
+}
+.form-group textarea { min-height: 96px; resize: vertical; }
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+  outline: 3px solid rgba(232, 147, 12, 0.35); border-color: var(--accent);
+}
+.form-hint { font-size: 14px; color: var(--text-soft); margin-top: 6px; }
+.form-error { color: var(--danger); font-size: 15px; font-weight: 600; margin-top: 6px; }
+.radio-cards { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+.radio-card {
+  border: 2px solid var(--border); border-radius: var(--radius); background: var(--bg-card);
+  padding: 16px 12px; text-align: center; cursor: pointer; font-weight: 700; font-size: 17px; min-height: 64px;
+}
+.radio-card small { display: block; font-weight: 400; color: var(--text-soft); font-size: 13.5px; margin-top: 4px; }
+.radio-card.selected { border-color: var(--primary); background: #fbf1e3; }
+
+/* ---------- ringkasan / konfirmasi ---------- */
+.summary-box, .info-box {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 16px;
+}
+.summary-box h3, .info-box h3 { margin: 0 0 12px; font-size: 19px; }
+.kv { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 16px; }
+.kv span:first-child { color: var(--text-soft); }
+.kv span:last-child { font-weight: 600; text-align: right; }
+.order-id {
+  font-size: 26px; font-weight: 800; color: var(--primary); letter-spacing: 1px;
+  background: #fbf1e3; border: 2px dashed var(--gold); border-radius: var(--radius);
+  padding: 14px; text-align: center; margin: 16px 0;
+}
+.status-pill {
+  display: inline-block; padding: 6px 14px; border-radius: 20px;
+  background: #f7ead6; color: var(--primary); font-weight: 700; font-size: 15px;
+}
+
+/* ---------- CTA WhatsApp ---------- */
+.wa-cta {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 24px 20px; text-align: center; box-shadow: var(--shadow);
+}
+.wa-cta h2 { margin: 0 0 8px; font-size: 22px; }
+.wa-cta p { color: var(--text-soft); margin: 0 0 18px; }
+
+/* ---------- FAQ ---------- */
+.faq details {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 10px;
+}
+.faq summary { font-weight: 700; cursor: pointer; font-size: 17px; min-height: 32px; }
+.faq p { margin: 10px 0 4px; color: var(--text-soft); }
+
+/* ---------- footer ---------- */
+.site-footer { background: #2e1f16; color: #f3e7d3; margin-top: 40px; }
+.site-footer .wrap { padding-top: 28px; padding-bottom: 28px; }
+.site-footer a { color: #ffd9a0; }
+.site-footer p { margin: 6px 0; font-size: 15px; }
+
+/* ---------- admin ---------- */
+.admin-table { width: 100%; border-collapse: collapse; background: var(--bg-card); border-radius: var(--radius); overflow: hidden; font-size: 15px; }
+.admin-table th, .admin-table td { padding: 12px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+.admin-table th { background: #f7ead6; font-size: 14px; }
+.admin-login { max-width: 420px; margin: 40px auto; }
+
+/* ---------- util ---------- */
+.alert { border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; font-weight: 600; }
+.alert-error { background: #fbe3e3; color: #8f1d1d; border: 1px solid #eecaca; }
+.alert-success { background: #e2f2e4; color: #1d5c22; border: 1px solid #c6e5c9; }
+.alert-info { background: #e8f0fe; color: #1a3f7a; border: 1px solid #c9dcf7; }
+.empty { text-align: center; padding: 48px 20px; color: var(--text-soft); }
+.empty p { font-size: 18px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.loading { text-align: center; padding: 40px; color: var(--text-soft); font-size: 18px; }

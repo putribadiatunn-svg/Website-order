@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pesanan Berhasil — Dimsum Enak</title>
+<meta name="description" content="Pesananmu berhasil dibuat. Kirim detail pesanan ke admin via WhatsApp.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%237b1f1f'/><text x='50' y='68' text-anchor='middle' font-size='52' font-weight='800' fill='white' font-family='system-ui'>D</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+
+<main>
+  <div class="wrap">
+    <section class="section">
+      <div id="order-wrap"><div class="loading">Memuat pesanan…</div></div>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script type="module">
+import { api, renderChrome, formatRupiah, escapeHtml, loadSettings } from '/js/app.js';
+
+await renderChrome('keranjang');
+const wrap = document.getElementById('order-wrap');
+const params = new URLSearchParams(location.search);
+const orderNumber = params.get('order');
+const phone = params.get('phone') || '';
+
+if (!orderNumber) {
+  wrap.innerHTML = '<div class="alert alert-error">Nomor pesanan tidak ditemukan.</div>';
+} else {
+  try {
+    const q = phone ? `?phone=${encodeURIComponent(phone)}` : '';
+    const { order, items, whatsapp_url } = await api('/api/orders/' + encodeURIComponent(orderNumber) + q);
+    const settings = await loadSettings();
+    const isDelivery = order.fulfillment_method === 'delivery';
+
+    wrap.innerHTML = `
+    <div class="alert alert-success">✅ Pesanan berhasil dibuat! Simpan nomor pesanan di bawah ini.</div>
+    <div class="order-id">#${escapeHtml(order.order_number)}</div>
+    <div style="text-align:center;margin-bottom:16px"><span class="status-pill">${escapeHtml(order.status_label)}</span></div>
+
+    <div class="summary-box">
+      <h3>Detail Pesanan</h3>
+      <div class="kv"><span>Nama</span><span>${escapeHtml(order.customer_name)}</span></div>
+      <div class="kv"><span>WhatsApp</span><span>${escapeHtml(order.customer_phone)}</span></div>
+      <div class="kv"><span>Metode</span><span>${isDelivery ? 'Delivery 🛵' : 'Pickup 🏃'}</span></div>
+      ${isDelivery ? `<div class="kv"><span>Alamat</span><span>${escapeHtml(order.address)}</span></div>` : `<div class="kv"><span>Lokasi pickup</span><span>${escapeHtml(settings.pickup_address || '-')}</span></div>`}
+      <div class="kv"><span>Pembayaran</span><span>${escapeHtml(order.payment_method)}</span></div>
+      ${order.notes ? `<div class="kv"><span>Catatan</span><span>${escapeHtml(order.notes)}</span></div>` : ''}
+    </div>
+
+    <div class="summary-box">
+      <h3>Produk</h3>
+      ${items.map((i) => `<div class="kv"><span>${escapeHtml(i.product_name)} × ${i.quantity}</span><span>${formatRupiah(i.subtotal)}</span></div>`).join('')}
+      <div class="kv"><span>Subtotal</span><span>${formatRupiah(order.subtotal)}</span></div>
+      ${order.delivery_fee > 0 ? `<div class="kv"><span>Ongkir</span><span>${formatRupiah(order.delivery_fee)}</span></div>` : ''}
+      <div class="total-row grand"><span>Total</span><span>${formatRupiah(order.total)}</span></div>
+    </div>
+
+    <div class="info-box">
+      <h3>📲 Langkah terakhir</h3>
+      <p>Tekan tombol di bawah untuk <strong>membuka WhatsApp</strong> dengan detail pesanan yang sudah terisi otomatis, lalu tekan kirim agar admin segera memproses pesananmu.</p>
+      <a class="btn btn-wa btn-block" href="${escapeHtml(whatsapp_url)}" target="_blank" rel="noopener">💬 Kirim Pesanan via WhatsApp</a>
+      <p class="form-hint">Catatan: tombol ini membuka WhatsApp — pesanan terkirim setelah kamu menekan tombol kirim di WhatsApp.</p>
+    </div>
+
+    <a class="btn btn-muted btn-block" href="/katalog">← Kembali Belanja</a>`;
+  } catch (e) {
+    wrap.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+  }
+}
+</script>
+</body>
+</html>

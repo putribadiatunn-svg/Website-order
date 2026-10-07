@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout — Dimsum Enak</title>
+<meta name="description" content="Isi data pemesanan tanpa perlu daftar akun. Pilih pickup atau delivery.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%237b1f1f'/><text x='50' y='68' text-anchor='middle' font-size='52' font-weight='800' fill='white' font-family='system-ui'>D</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+
+<main>
+  <div class="wrap">
+    <section class="section">
+      <h1 style="margin:0 0 16px">🧾 Pemesanan</h1>
+      <div id="checkout-wrap"><div class="loading">Memuat…</div></div>
+    </section>
+  </div>
+</main>
+
+<footer class="site-footer" id="site-footer"></footer>
+
+<script type="module">
+import { api, renderChrome, formatRupiah, loadSettings, escapeHtml } from '/js/app.js';
+import { cartDetailed, clearCart } from '/js/cart.js';
+
+await renderChrome('keranjang');
+const wrap = document.getElementById('checkout-wrap');
+const settings = await loadSettings();
+
+let items = [];
+try { items = await cartDetailed(); } catch (e) {
+  wrap.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
+  throw e;
+}
+if (!items.length) {
+  wrap.innerHTML = `<div class="empty"><p>Keranjang masih kosong.</p><a class="btn btn-primary" href="/katalog">Lihat Katalog</a></div>`;
+} else {
+  const subtotal = items.reduce((n, i) => n + i.subtotal, 0);
+  const payOpts = (settings.payment_methods || ['COD']).map((m) =>
+    `<option value="${m}">${m}</option>`).join('');
+
+  wrap.innerHTML = `
+  <div class="summary-box">
+    <h3>Ringkasan Pesanan</h3>
+    ${items.map((i) => `<div class="kv"><span>${escapeHtml(i.name)} × ${i.qty}</span><span>${formatRupiah(i.subtotal)}</span></div>`).join('')}
+    <div class="kv"><span>Subtotal</span><span>${formatRupiah(subtotal)}</span></div>
+    <div class="kv" id="row-ongkir" hidden><span>Ongkir</span><span id="ongkir-val"></span></div>
+    <div class="total-row grand"><span>Total</span><span id="total-val">${formatRupiah(subtotal)}</span></div>
+  </div>
+
+  <form id="order-form" novalidate>
+    <div class="form-group">
+      <label for="nama">Nama</label>
+      <input id="nama" name="nama" type="text" placeholder="Nama kamu" autocomplete="name" required>
+    </div>
+    <div class="form-group">
+      <label for="wa">Nomor WhatsApp</label>
+      <input id="wa" name="wa" type="tel" inputmode="tel" placeholder="Contoh: 081234567890" autocomplete="tel" required>
+      <div class="form-hint">Nomor ini dipakai admin untuk konfirmasi pesanan.</div>
+    </div>
+    <div class="form-group">
+      <label>Terima pesanan dengan cara</label>
+      <div class="radio-cards">
+        <div class="radio-card selected" data-method="pickup" role="radio" aria-checked="true" tabindex="0">🏃 Pickup<small>Ambil sendiri di lokasi</small></div>
+        <div class="radio-card" data-method="delivery" role="radio" aria-checked="false" tabindex="0">🛵 Delivery<small>Diantar ke alamatmu</small></div>
+      </div>
+    </div>
+    <div class="form-group" id="alamat-group" hidden>
+      <label for="alamat">Alamat Pengiriman</label>
+      <textarea id="alamat" name="alamat" placeholder="Tulis alamat lengkap + patokan"></textarea>
+    </div>
+    <div class="info-box" id="pickup-info">
+      <h3>📍 Lokasi Pickup</h3>
+      <p>${escapeHtml(settings.pickup_address || 'Alamat pickup akan diinformasikan admin.')}</p>
+    </div>
+    <div class="form-group">
+      <label for="bayar">Metode Pembayaran</label>
+      <select id="bayar" name="bayar">${payOpts}</select>
+    </div>
+    <div class="form-group">
+      <label for="catatan">Catatan (opsional)</label>
+      <textarea id="catatan" name="catatan" placeholder="Contoh: sausnya dipisah ya"></textarea>
+    </div>
+    <div class="alert alert-error" id="form-error" hidden></div>
+    <button type="submit" class="btn btn-primary btn-block" id="btn-submit">Buat Pesanan</button>
+    <p class="form-hint" style="text-align:center">Dengan menekan tombol di atas, kamu menyetujui pesanan ini.</p>
+  </form>`;
+
+  let method = 'pickup';
+  const deliveryFee = Number(settings.delivery_fee) || 0;
+  const cards = [...wrap.querySelectorAll('.radio-card')];
+  const alamatGroup = wrap.querySelector('#alamat-group');
+  const pickupInfo = wrap.querySelector('#pickup-info');
+
+  function refreshMethod() {
+    cards.forEach((c) => {
+      const sel = c.dataset.method === method;
+      c.classList.toggle('selected', sel);
+      c.setAttribute('aria-checked', sel ? 'true' : 'false');
+    });
+    const isDel = method === 'delivery';
+    alamatGroup.hidden = !isDel;
+    pickupInfo.hidden = isDel;
+    wrap.querySelector('#row-ongkir').hidden = !isDel || !deliveryFee;
+    wrap.querySelector('#ongkir-val').textContent = formatRupiah(deliveryFee);
+    wrap.querySelector('#total-val').textContent = formatRupiah(subtotal + (isDel ? deliveryFee : 0));
+  }
+  cards.forEach((c) => {
+    const pick = () => { method = c.dataset.method; refreshMethod(); };
+    c.addEventListener('click', pick);
+    c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+  refreshMethod();
+
+  wrap.querySelector('#order-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errBox = wrap.querySelector('#form-error');
+    errBox.hidden = true;
+    const btn = wrap.querySelector('#btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'Memproses…';
+    try {
+      const payload = {
+        customer_name: wrap.querySelector('#nama').value.trim(),
+        customer_phone: wrap.querySelector('#wa').value.trim(),
+        fulfillment_method: method,
+        address: wrap.querySelector('#alamat').value.trim(),
+        notes: wrap.querySelector('#catatan').value.trim(),
+        payment_method: wrap.querySelector('#bayar').value,
+        items: items.map((i) => ({ product_id: i.id, quantity: i.qty })),
+      };
+      const { order } = await api('/api/orders', { method: 'POST', body: JSON.stringify(payload) });
+      clearCart();
+      location.href = `/pesanan?order=${encodeURIComponent(order.order_number)}&phone=${encodeURIComponent(order.customer_phone)}`;
+    } catch (err) {
+      errBox.textContent = err.message;
+      errBox.hidden = false;
+      btn.disabled = false;
+      btn.textContent = 'Buat Pesanan';
+      errBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+}
+</script>
+</body>
+</html>

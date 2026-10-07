@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Dimsum Enak</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%237b1f1f'/><text x='50' y='68' text-anchor='middle' font-size='52' font-weight='800' fill='white' font-family='system-ui'>D</text></svg>">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header class="site-header" id="site-header"></header>
+
+<main>
+  <div class="wrap">
+    <section class="section" id="admin-root"><div class="loading">Memuat…</div></section>
+  </div>
+</main>
+
+<script type="module">
+import { renderChrome, formatRupiah, escapeHtml } from '/js/app.js';
+await renderChrome('');
+
+const root = document.getElementById('admin-root');
+const TOKEN_KEY = 'dimsum_admin_token';
+let token = sessionStorage.getItem(TOKEN_KEY) || '';
+
+async function adminApi(path, opts = {}) {
+  const res = await fetch(path, {
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': token, ...(opts.headers || {}) },
+    ...opts,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401) { sessionStorage.removeItem(TOKEN_KEY); token = ''; showLogin('Token salah atau kedaluwarsa.'); throw new Error('unauthorized'); }
+  if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan.');
+  return data;
+}
+
+function showLogin(msg = '') {
+  root.innerHTML = `
+  <div class="admin-login">
+    <h1>🔐 Admin</h1>
+    ${msg ? `<div class="alert alert-error">${escapeHtml(msg)}</div>` : ''}
+    <div class="form-group">
+      <label for="token">Token Admin</label>
+      <input id="token" type="password" placeholder="Masukkan ADMIN_TOKEN" autocomplete="off">
+      <div class="form-hint">Token ini ada di file .env server (ADMIN_TOKEN).</div>
+    </div>
+    <button class="btn btn-primary btn-block" id="btn-login">Masuk</button>
+  </div>`;
+  document.getElementById('btn-login').onclick = () => {
+    token = document.getElementById('token').value.trim();
+    if (!token) return;
+    sessionStorage.setItem(TOKEN_KEY, token);
+    showDashboard();
+  };
+}
+
+const STATUSES = ['menunggu_konfirmasi', 'diproses', 'siap', 'selesai', 'dibatalkan'];
+const STATUS_ID = { menunggu_konfirmasi: 'Menunggu konfirmasi', diproses: 'Diproses', siap: 'Siap diambil / dikirim', selesai: 'Selesai', dibatalkan: 'Dibatalkan' };
+
+async function showDashboard() {
+  root.innerHTML = `
+  <h1>📊 Dashboard Admin</h1>
+  <div class="chips" style="margin-bottom:16px">
+    <button class="chip active" data-tab="orders">Pesanan</button>
+    <button class="chip" data-tab="products">Produk</button>
+    <button class="chip" data-tab="settings">Pengaturan</button>
+    <button class="chip" data-tab="logout">Keluar</button>
+  </div>
+  <div id="tab-body"><div class="loading">Memuat…</div></div>`;
+
+  const body = document.getElementById('tab-body');
+  root.querySelector('.chips').addEventListener('click', async (e) => {
+    const tab = e.target.closest('[data-tab]');
+    if (!tab) return;
+    if (tab.dataset.tab === 'logout') { sessionStorage.removeItem(TOKEN_KEY); token = ''; showLogin(); return; }
+    root.querySelectorAll('.chips .chip').forEach((c) => c.classList.toggle('active', c === tab));
+    if (tab.dataset.tab === 'orders') renderOrders(body);
+    if (tab.dataset.tab === 'products') renderProducts(body);
+    if (tab.dataset.tab === 'settings') renderSettings(body);
+  });
+  renderOrders(body);
+}
+
+async function renderOrders(body) {
+  body.innerHTML = '<div class="loading">Memuat pesanan…</div>';
+  try {
+    const { orders } = await adminApi('/api/admin/orders');
+    if (!orders.length) { body.innerHTML = '<div class="empty"><p>Belum ada pesanan.</p></div>'; return; }
+    body.innerHTML = `
+    <div style="overflow-x:auto"><table class="admin-table">
+      <tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Aksi</th></tr>
+      ${orders.map((o) => `
+      <tr>
+        <td><strong>#${escapeHtml(o.order_number)}</strong><br><small>${escapeHtml((o.created_at || '').slice(0, 16).replace('T', ' '))}</small></td>
+        <td>${escapeHtml(o.customer_name)}<br><small>${escapeHtml(o.customer_phone)}</small></td>
+        <td>${formatRupiah(o.total)}</td>
+        <td><span class="status-pill">${escapeHtml(o.status_label)}</span></td>
+        <td><select data-order="${o.id}" aria-label="Ubah status">
+          ${STATUSES.map((s) => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${STATUS_ID[s]}</option>`).join('')}
+        </select></td>
+      </tr>`).join('')}
+    </table></div>
+    <p class="form-hint">Mengubah status menjadi "Dibatalkan" akan mengembalikan stok otomatis.</p>`;
+    body.querySelectorAll('[data-order]').forEach((sel) => {
+      sel.addEventListener('change', async () => {
+        try {
+          await adminApi(`/api/admin/orders/${sel.dataset.order}/status`, {
+            method: 'PATCH', body: JSON.stringify({ status: sel.value }),
+          });
+          renderOrders(body);
+        } catch (e) { alert(e.message); }
+      });
+    });
+  } catch (e) { if (e.message !== 'unauthorized') body.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`; }
+}
+
+async function renderProducts(body) {
+  body.innerHTML = '<div class="loading">Memuat produk…</div>';
+  try {
+    const { products } = await adminApi('/api/admin/products');
+    body.innerHTML = `
+    <div style="overflow-x:auto"><table class="admin-table">
+      <tr><th>Produk</th><th>Harga</th><th>Stok</th><th>Aktif</th><th></th></tr>
+      ${products.map((p) => `
+      <tr>
+        <td><strong>${escapeHtml(p.name)}</strong><br><small>${escapeHtml(p.category)} · ${escapeHtml(p.slug)}</small></td>
+        <td><input type="number" min="0" step="500" value="${p.price}" data-price="${p.id}" style="width:110px;min-height:44px"></td>
+        <td><input type="number" min="0" value="${p.stock_quantity}" data-stock="${p.id}" style="width:80px;min-height:44px"></td>
+        <td><input type="checkbox" data-active="${p.id}" ${p.is_active ? 'checked' : ''} style="width:28px;height:28px" aria-label="Aktif"></td>
+        <td><button class="btn btn-sm btn-primary" data-save="${p.id}">Simpan</button></td>
+      </tr>`).join('')}
+    </table></div>
+    <p class="form-hint">Ubah harga/stok lalu tekan Simpan. Menonaktifkan produk menyembunyikannya dari katalog.</p>`;
+    body.querySelectorAll('[data-save]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.save;
+        const price = Number(body.querySelector(`[data-price="${id}"]`).value);
+        const stock = Number(body.querySelector(`[data-stock="${id}"]`).value);
+        const active = body.querySelector(`[data-active="${id}"]`).checked;
+        try {
+          await adminApi(`/api/admin/products/${id}`, {
+            method: 'PATCH', body: JSON.stringify({ price, stock_quantity: stock, is_active: active }),
+          });
+          btn.textContent = '✓';
+          setTimeout(() => (btn.textContent = 'Simpan'), 1200);
+        } catch (e) { alert(e.message); }
+      });
+    });
+  } catch (e) { if (e.message !== 'unauthorized') body.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`; }
+}
+
+async function renderSettings(body) {
+  body.innerHTML = '<div class="loading">Memuat pengaturan…</div>';
+  try {
+    const { settings } = await adminApi('/api/admin/settings');
+    const pm = (() => { try { return JSON.parse(settings.payment_methods || '[]'); } catch { return []; } })();
+    body.innerHTML = `
+    <div class="form-group"><label>Nama Toko</label><input id="s-shop" value="${escapeHtml(settings.shop_name || '')}"></div>
+    <div class="form-group"><label>WhatsApp Admin (628…)</label><input id="s-wa" value="${escapeHtml(settings.admin_whatsapp || '')}"><div class="form-hint">Dipakai untuk notifikasi pesanan & tombol tanya-tanya.</div></div>
+    <div class="form-group"><label>Alamat Pickup</label><textarea id="s-addr">${escapeHtml(settings.pickup_address || '')}</textarea></div>
+    <div class="form-group"><label>Metode Pembayaran (pisahkan koma)</label><input id="s-pay" value="${escapeHtml(pm.join(', '))}"></div>
+    <div class="form-group"><label>Ongkir Delivery (Rp)</label><input id="s-fee" type="number" min="0" value="${escapeHtml(settings.delivery_fee || '0')}"></div>
+    <button class="btn btn-primary" id="s-save">Simpan Pengaturan</button>`;
+    document.getElementById('s-save').onclick = async () => {
+      try {
+        await adminApi('/api/admin/settings', { method: 'PUT', body: JSON.stringify({
+          shop_name: document.getElementById('s-shop').value,
+          admin_whatsapp: document.getElementById('s-wa').value,
+          pickup_address: document.getElementById('s-addr').value,
+          payment_methods: document.getElementById('s-pay').value,
+          delivery_fee: document.getElementById('s-fee').value,
+        })});
+        alert('Pengaturan tersimpan.');
+      } catch (e) { alert(e.message); }
+    };
+  } catch (e) { if (e.message !== 'unauthorized') body.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`; }
+}
+
+if (token) {
+  try { await adminApi('/api/admin/settings'); showDashboard(); }
+  catch { showLogin(); }
+} else showLogin();
+</script>
+</body>
+</html>

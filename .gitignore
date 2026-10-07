@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets — JANGAN PERNAH di-commit
+.env
+.env.local
+.env.*.local
+
+# Database (dibuat otomatis saat server jalan / seed)
+data/*.db
+data/*.db-*
+!data/.gitkeep
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
