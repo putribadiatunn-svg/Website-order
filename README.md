@@ -123,6 +123,27 @@ Test validasi: stok melebihi (tolak), HP salah format (tolak), delivery tanpa al
 isi Environment Variables seperti di atas, tambah Disk untuk `/opt/render/project/src/data`
 dengan `DATA_DIR` menunjuk ke sana.
 
+**InfinityFree / shared hosting — versi PHP + MySQL (branch `php-mysql`):**
+
+> Branch `php-mysql` adalah port PHP native + MySQL dari aplikasi yang sama,
+> khusus untuk shared hosting yang tidak mendukung Node.js (mis. InfinityFree).
+> Semua fitur v1 tetap sama: katalog, keranjang, checkout, stok transaksional,
+> admin panel, notifikasi WhatsApp.
+
+1. Di InfinityFree: buat akun → buat database MySQL (catat host, nama DB, user, password).
+2. Upload SEMUA file dari branch `php-mysql` ke folder `htdocs/` (termasuk `public/`, `api/`, file `.php`, `.htaccess`).
+3. Import `schema.sql` via phpMyAdmin (tab Import).
+4. Isi environment variable — InfinityFree tidak punya panel env var, jadi buat file `.env.php` (JANGAN di-commit) atau edit langsung di `config.php`:
+   `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS`, `ADMIN_TOKEN`, `ADMIN_WHATSAPP`.
+   > Alternatif aman: set via `.htaccess` dengan `SetEnv DB_HOST ...` (cek dukungan host).
+5. Buka `https://domainkamu/seed.php` sekali untuk isi produk contoh, lalu **HAPUS `seed.php`**.
+6. Buka website dari HP, test checkout & admin.
+
+Catatan InfinityFree: tidak ada Node.js / proses persistent — versi PHP inilah yang dipakai.
+MySQL di InfinityFree tidak mendukung `CHECK` constraint di semua versi; bila import
+`schema.sql` error pada baris CHECK, hapus klausa `CHECK (...)` tersebut (validasi tetap
+dijaga di level aplikasi via `lib/validate.php`).
+
 ## API Ringkas
 
 - `GET /api/products`, `GET /api/products?category=dimsum`, `GET /api/products/:slug`

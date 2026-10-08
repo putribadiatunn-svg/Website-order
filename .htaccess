@@ -1,0 +1,36 @@
+# .htaccess — routing untuk Apache / shared hosting (InfinityFree, dll.)
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# --- API: teruskan ke file PHP yang sesuai (pertahankan query string) ---
+RewriteRule ^api/products(/.*)?$ api/products.php [QSA,L]
+RewriteRule ^api/orders(/.*)?$ api/orders.php [QSA,L]
+RewriteRule ^api/settings(/.*)?$ api/settings.php [QSA,L]
+RewriteRule ^api/admin(/.*)?$ api/admin.php [QSA,L]
+
+# --- File statis frontend dari public/ (css, js, img) ---
+RewriteCond %{REQUEST_URI} !^/api/
+RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+RewriteRule ^(.*)$ public/$1 [L]
+
+# --- URL cantik -> halaman HTML ---
+RewriteRule ^$ public/index.html [L]
+RewriteRule ^katalog/?$ public/katalog.html [L]
+RewriteRule ^produk/?$ public/produk.html [L]
+RewriteRule ^keranjang/?$ public/keranjang.html [L]
+RewriteRule ^checkout/?$ public/checkout.html [L]
+RewriteRule ^pesanan/?$ public/pesanan.html [L]
+RewriteRule ^admin/?$ public/admin.html [L]
+</IfModule>
+
+# Fallback bila mod_rewrite mati: index.php menangani routing sendiri.
+# (Pastikan index.php ada di root.)
+
+# Keamanan: jangan expose file sensitif
+<FilesMatch "^(config\.php|db\.php|schema\.sql|\.env)$">
+  Require all denied
+</FilesMatch>
+<Files "seed.php">
+  # Buka komentar baris bawah ini setelah seeding selesai untuk memblokirnya:
+  # Require all denied
+</Files>
