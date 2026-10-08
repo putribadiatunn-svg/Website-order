@@ -1,0 +1,33 @@
+# Render Blueprint untuk Website-order (Node.js + Express + node:sqlite)
+# Cara pakai:
+#   1. Push file ini ke branch main di GitHub.
+#   2. Buka dashboard Render → New → Web Service → pilih repo
+#      putribadiatunn-svg/Website-order (atau "Use existing render.yaml").
+#   3. Isi env var ADMIN_TOKEN (wajib, untuk panel admin) dan env opsional
+#      di bawah pada tab Environment di dashboard Render.
+#
+# CATATAN PENTING (free tier Render):
+#   - Service "tidur" setelah idle ~15 menit; akses pertama loading ±1 menit.
+#   - Filesystem ephemeral: file data/shop.db HILANG setiap deploy ulang /
+#     restart / spin-down. Kalau data pesanan harus awet, pindahkan DB ke
+#     Postgres gratis (misal Neon) — itu kerja tambahan, bukan konfigurasi ini.
+
+services:
+  - type: web
+    name: website-order
+    runtime: node
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # WAJIB diisi di dashboard Render (jangan commit nilainya):
+      - key: ADMIN_TOKEN
+        sync: false
+      # Opsional — bisa diisi di dashboard atau biarkan default:
+      - key: SHOP_NAME
+        value: "Dimsum Enak"
+      - key: ADMIN_WHATSAPP
+        sync: false
+      - key: PICKUP_ADDRESS
+        sync: false
