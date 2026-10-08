@@ -1,4 +1,4 @@
-# Website Order — Dimsum & Olahan Ayam
+# Website Order 
 
 Website pemesanan makanan (dimsum & olahan ayam), mobile-first, untuk customer langsung (bukan marketplace).
 Guest checkout tanpa daftar akun, notifikasi pesanan via WhatsApp, manajemen stok server-side.
