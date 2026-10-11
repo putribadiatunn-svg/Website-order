@@ -12,6 +12,8 @@
  *   GET   /api/admin/products
  *   POST  /api/admin/products
  *   PATCH /api/admin/products/{id}
+ *   DELETE /api/admin/products/{id}
+ *   POST  /api/admin/upload  (multipart, field "file" -> JPG/PNG/WebP max 2MB)
  *   GET   /api/admin/settings
  *   PUT   /api/admin/settings
  */
@@ -198,6 +200,36 @@ if ($method === 'PATCH' && count($seg) === 2 && $seg[0] === 'products' && ctype_
     if (!$r['changes']) api_error('Produk tidak ditemukan.', 404);
     $product = db_row('SELECT ' . ADMIN_PRODUCT_FIELDS . ' FROM products WHERE id = ?', [(int) $seg[1]]);
     json_response(['product' => $product]);
+}
+
+// DELETE /api/admin/products/{id}
+if ($method === 'DELETE' && count($seg) === 2 && $seg[0] === 'products' && ctype_digit($seg[1])) {
+    $r = db_exec('DELETE FROM products WHERE id = ?', [(int) $seg[1]]);
+    if (!$r['changes']) api_error('Produk tidak ditemukan.', 404);
+    json_response(['deleted' => (int) $seg[1]]);
+}
+
+// POST /api/admin/upload — upload foto produk (multipart/form-data, field "file")
+if ($method === 'POST' && $seg === ['upload']) {
+    $f = $_FILES['file'] ?? null;
+    if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        api_error('File tidak diterima.', 400);
+    }
+    if ($f['size'] > 2 * 1024 * 1024) api_error('Ukuran file maksimal 2 MB.', 400);
+    $info = @getimagesize($f['tmp_name']);
+    $allowed = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
+    if (!$info || !isset($allowed[$info[2]])) {
+        api_error('File harus gambar JPG, PNG, atau WebP.', 400);
+    }
+    $dir = __DIR__ . '/../public/img';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) api_error('Gagal membuat folder img.', 500);
+    $base = preg_replace('/[^a-z0-9-]/', '', strtolower(pathinfo($f['name'], PATHINFO_FILENAME)));
+    if ($base === '') $base = 'produk';
+    $name = substr($base, 0, 40) . '-' . bin2hex(random_bytes(4)) . '.' . $allowed[$info[2]];
+    if (!move_uploaded_file($f['tmp_name'], $dir . '/' . $name)) {
+        api_error('Gagal menyimpan file.', 500);
+    }
+    json_response(['path' => '/img/' . $name], 201);
 }
 
 /* ---------- SETTINGS ---------- */
