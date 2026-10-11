@@ -40,19 +40,45 @@ try {
     }
 
     // 2. CHECK status -> tambah 'menunggu_pembayaran'
-    $checks = $pdo->query(
-        "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
-         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' AND CONSTRAINT_TYPE = 'CHECK'"
-    )->fetchAll(PDO::FETCH_COLUMN);
-    foreach ($checks as $c) {
-        $pdo->exec("ALTER TABLE orders DROP CHECK `$c`");
+    //    Hanya CHECK status yang diganti; CHECK lain (fulfillment_method, subtotal, dsb) dibiarkan.
+    $isMaria = stripos((string) $pdo->getAttribute(PDO::ATTR_SERVER_VERSION), 'mariadb') !== false;
+    $create = $pdo->query('SHOW CREATE TABLE orders')->fetch(PDO::FETCH_ASSOC);
+    $createSql = $create['Create Table'] ?? '';
+    $statusCheck = null;
+    if (preg_match_all('/CONSTRAINT\s+`([^`]+)`\s+CHECK\s*\((.*?)\)\s*(?=,|\n)/si', $createSql, $mm, PREG_SET_ORDER)) {
+        foreach ($mm as $m) {
+            if (stripos($m[2], 'menunggu_konfirmasi') !== false) {
+                $statusCheck = $m[1];
+                break;
+            }
+        }
     }
-    if ($checks) $log[] = 'CHECK lama dihapus (' . count($checks) . ').';
-    $pdo->exec(
-        "ALTER TABLE orders ADD CONSTRAINT chk_orders_status
-         CHECK (status IN ('menunggu_pembayaran','menunggu_konfirmasi','diproses','siap','selesai','dibatalkan'))"
-    );
-    $log[] = "CHECK status baru ditambahkan (termasuk menunggu_pembayaran).";
+    // Fallback: nama auto MariaDB untuk CHECK kolom status adalah `status`
+    $alreadyNew = false;
+    if ($statusCheck === null) {
+        $names = $pdo->query(
+            "SELECT CONSTRAINT_NAME FROM information_schema.TABLE_CONSTRAINTS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orders' AND CONSTRAINT_TYPE = 'CHECK'"
+        )->fetchAll(PDO::FETCH_COLUMN);
+        if (in_array('chk_orders_status', $names, true)) {
+            $alreadyNew = true;
+            $log[] = 'CHECK status baru sudah ada — dilewati.';
+        } elseif (in_array('status', $names, true)) {
+            $statusCheck = 'status';
+        }
+    }
+    if (!$alreadyNew && $statusCheck !== null) {
+        $dropKw = $isMaria ? 'DROP CONSTRAINT' : 'DROP CHECK';
+        $pdo->exec("ALTER TABLE orders $dropKw `$statusCheck`");
+        $log[] = "CHECK status lama (`$statusCheck`) dihapus.";
+        $pdo->exec(
+            "ALTER TABLE orders ADD CONSTRAINT chk_orders_status
+             CHECK (status IN ('menunggu_pembayaran','menunggu_konfirmasi','diproses','siap','selesai','dibatalkan'))"
+        );
+        $log[] = 'CHECK status baru ditambahkan (termasuk menunggu_pembayaran).';
+    } elseif (!$alreadyNew) {
+        $log[] = 'CHECK status lama tidak ditemukan — dilewati.';
+    }
 
     // 3. Settings baru
     require __DIR__ . '/db.php';
