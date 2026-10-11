@@ -94,7 +94,7 @@ if (!items.length) {
 
   let method = 'pickup';
   const deliveryFee = Number(settings.delivery_fee) || 0;
-  const cards = [...wrap.querySelectorAll('.radio-card')];
+  const cards = [...wrap.querySelectorAll('.radio-card[data-method]')];
   const alamatGroup = wrap.querySelector('#alamat-group');
   const pickupInfo = wrap.querySelector('#pickup-info');
 
