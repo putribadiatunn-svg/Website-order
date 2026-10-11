@@ -70,7 +70,7 @@ try {
     }
     if (!$alreadyNew && $statusCheck !== null) {
         $dropped = false;
-        $lastErr = '';
+        $errs = [];
         foreach (['DROP CONSTRAINT', 'DROP CHECK'] as $kw) {
             try {
                 $pdo->exec("ALTER TABLE orders $kw `$statusCheck`");
@@ -78,11 +78,11 @@ try {
                 $log[] = "CHECK status lama (`$statusCheck`) dihapus via $kw.";
                 break;
             } catch (PDOException $e) {
-                $lastErr = $e->getMessage();
+                $errs[] = "$kw => " . $e->getMessage();
             }
         }
         if (!$dropped) {
-            throw new RuntimeException('Gagal DROP CHECK: ' . $lastErr);
+            throw new RuntimeException('Gagal DROP CHECK. ' . implode(' | ', $errs));
         }
         $pdo->exec(
             "ALTER TABLE orders ADD CONSTRAINT chk_orders_status
