@@ -56,8 +56,8 @@ function showLogin(msg = '') {
   };
 }
 
-const STATUSES = ['menunggu_konfirmasi', 'diproses', 'siap', 'selesai', 'dibatalkan'];
-const STATUS_ID = { menunggu_konfirmasi: 'Menunggu konfirmasi', diproses: 'Diproses', siap: 'Siap diambil / dikirim', selesai: 'Selesai', dibatalkan: 'Dibatalkan' };
+const STATUSES = ['menunggu_pembayaran', 'menunggu_konfirmasi', 'diproses', 'siap', 'selesai', 'dibatalkan'];
+const STATUS_ID = { menunggu_pembayaran: 'Menunggu pembayaran', menunggu_konfirmasi: 'Menunggu konfirmasi', diproses: 'Diproses', siap: 'Siap diambil / dikirim', selesai: 'Selesai', dibatalkan: 'Dibatalkan' };
 
 async function showDashboard() {
   root.innerHTML = `
@@ -90,19 +90,20 @@ async function renderOrders(body) {
     if (!orders.length) { body.innerHTML = '<div class="empty"><p>Belum ada pesanan.</p></div>'; return; }
     body.innerHTML = `
     <div style="overflow-x:auto"><table class="admin-table">
-      <tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Aksi</th></tr>
+      <tr><th>Order</th><th>Customer</th><th>Total</th><th>Bayar</th><th>Status</th><th>Aksi</th></tr>
       ${orders.map((o) => `
       <tr>
         <td><strong>#${escapeHtml(o.order_number)}</strong><br><small>${escapeHtml((o.created_at || '').slice(0, 16).replace('T', ' '))}</small></td>
         <td>${escapeHtml(o.customer_name)}<br><small>${escapeHtml(o.customer_phone)}</small></td>
         <td>${formatRupiah(o.total)}</td>
+        <td><small>${escapeHtml(o.payment_method || 'COD')}</small>${o.payment_proof ? `<br><a href="${escapeHtml(o.payment_proof)}" target="_blank" rel="noopener"><img src="${escapeHtml(o.payment_proof)}" alt="Bukti" style="max-width:64px;border-radius:6px;margin-top:4px"></a>` : ''}</td>
         <td><span class="status-pill">${escapeHtml(o.status_label)}</span></td>
         <td><select data-order="${o.id}" aria-label="Ubah status">
           ${STATUSES.map((s) => `<option value="${s}" ${s === o.status ? 'selected' : ''}>${STATUS_ID[s]}</option>`).join('')}
         </select></td>
       </tr>`).join('')}
     </table></div>
-    <p class="form-hint">Mengubah status menjadi "Dibatalkan" akan mengembalikan stok otomatis.</p>`;
+    <p class="form-hint">Ubah "Menunggu pembayaran" → "Diproses" setelah bukti transfer diverifikasi. "Dibatalkan" mengembalikan stok otomatis.</p>`;
     body.querySelectorAll('[data-order]').forEach((sel) => {
       sel.addEventListener('change', async () => {
         try {
@@ -251,8 +252,28 @@ async function renderSettings(body) {
     <div class="form-group"><label>WhatsApp Admin (628…)</label><input id="s-wa" value="${escapeHtml(settings.admin_whatsapp || '')}"><div class="form-hint">Dipakai untuk notifikasi pesanan & tombol tanya-tanya.</div></div>
     <div class="form-group"><label>Alamat Pickup</label><textarea id="s-addr">${escapeHtml(settings.pickup_address || '')}</textarea></div>
     <div class="form-group"><label>Metode Pembayaran (pisahkan koma)</label><input id="s-pay" value="${escapeHtml(pm.join(', '))}"></div>
+    <div class="form-group"><label>Rekening Tujuan Transfer</label><textarea id="s-bank" rows="3" placeholder="Satu rekening per baris, contoh:&#10;BCA 1234567890 a.n. Nama Kamu&#10;Mandiri 0987654321 a.n. Nama Kamu">${escapeHtml(settings.payment_bank_accounts || '')}</textarea><div class="form-hint">Tampil di halaman pembayaran customer yang pilih Transfer.</div></div>
+    <div class="form-group"><label>Kode QRIS</label>
+      <div id="s-qris-prev" style="margin-bottom:8px">${settings.payment_qris_image ? `<img src="${escapeHtml(settings.payment_qris_image)}" alt="QRIS" style="max-width:160px;border-radius:8px">` : '<span class="form-hint">Belum ada QRIS</span>'}</div>
+      <input id="s-qris-file" type="file" accept="image/jpeg,image/png,image/webp">
+      <input id="s-qris" type="hidden" value="${escapeHtml(settings.payment_qris_image || '')}">
+      <div class="form-hint">Upload gambar QRIS (JPG/PNG/WebP, max 2 MB).</div>
+    </div>
     <div class="form-group"><label>Ongkir Delivery (Rp)</label><input id="s-fee" type="number" min="0" value="${escapeHtml(settings.delivery_fee || '0')}"></div>
-    <button class="btn btn-primary" id="s-save">Simpan Pengaturan</button>`;
+    <button class="btn btn-primary" id="s-save">Simpan Pengaturan</button>
+    <div id="s-msg" style="margin-top:8px"></div>`;
+    document.getElementById('s-qris-file').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const msg = document.getElementById('s-msg');
+      msg.textContent = 'Meng-upload QRIS…';
+      try {
+        const path = await uploadImage(file);
+        document.getElementById('s-qris').value = path;
+        document.getElementById('s-qris-prev').innerHTML = `<img src="${escapeHtml(path)}" alt="QRIS" style="max-width:160px;border-radius:8px">`;
+        msg.textContent = 'QRIS ter-upload. Jangan lupa tekan Simpan Pengaturan.';
+      } catch (err) { msg.innerHTML = `<span style="color:#b00">${escapeHtml(err.message)}</span>`; }
+    });
     document.getElementById('s-save').onclick = async () => {
       try {
         await adminApi('/api/admin/settings', { method: 'PUT', body: JSON.stringify({
@@ -260,6 +281,8 @@ async function renderSettings(body) {
           admin_whatsapp: document.getElementById('s-wa').value,
           pickup_address: document.getElementById('s-addr').value,
           payment_methods: document.getElementById('s-pay').value,
+          payment_bank_accounts: document.getElementById('s-bank').value,
+          payment_qris_image: document.getElementById('s-qris').value,
           delivery_fee: document.getElementById('s-fee').value,
         })});
         alert('Pengaturan tersimpan.');

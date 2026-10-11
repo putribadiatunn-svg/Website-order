@@ -38,6 +38,9 @@ if (!orderNumber) {
     const { order, items, whatsapp_url } = await api('/api/orders/' + encodeURIComponent(orderNumber) + q);
     const settings = await loadSettings();
     const isDelivery = order.fulfillment_method === 'delivery';
+    const needPay = order.payment_method === 'Transfer' && order.status === 'menunggu_pembayaran';
+    const qris = settings.payment_qris_image || '';
+    const accounts = (settings.payment_bank_accounts || '').split('\n').map((s) => s.trim()).filter(Boolean);
 
     wrap.innerHTML = `
     <div class="alert alert-success">✅ Pesanan berhasil dibuat! Simpan nomor pesanan di bawah ini.</div>
@@ -62,14 +65,55 @@ if (!orderNumber) {
       <div class="total-row grand"><span>Total</span><span>${formatRupiah(order.total)}</span></div>
     </div>
 
+    ${needPay ? `
+    <div class="summary-box" style="border:2px solid #7b1f1f">
+      <h3>💳 Lakukan Pembayaran</h3>
+      <p>Transfer <strong>${formatRupiah(order.total)}</strong> ke salah satu tujuan berikut:</p>
+      ${qris ? `<div style="text-align:center;margin:12px 0"><img src="${escapeHtml(qris)}" alt="QRIS" style="max-width:220px;border-radius:8px"><div class="form-hint">Scan QRIS di atas</div></div>` : ''}
+      ${accounts.length ? `<div class="kv" style="display:block">${accounts.map((a) => `<div style="padding:6px 0;border-bottom:1px dashed #ddd"><strong>${escapeHtml(a)}</strong></div>`).join('')}</div>` : ''}
+      ${order.payment_proof ? `
+        <div class="alert alert-success">✅ Bukti pembayaran terkirim. Menunggu verifikasi admin.</div>
+        <div style="text-align:center"><img src="${escapeHtml(order.payment_proof)}" alt="Bukti pembayaran" style="max-width:200px;border-radius:8px"></div>
+      ` : `
+      <div class="form-group" style="margin-top:12px">
+        <label for="bukti">Upload Bukti Transfer</label>
+        <input id="bukti" type="file" accept="image/jpeg,image/png,image/webp">
+        <div class="form-hint">Foto/screenshot bukti transfer (JPG/PNG/WebP, max 2 MB).</div>
+      </div>
+      <button class="btn btn-primary btn-block" id="btn-bukti">Kirim Bukti Pembayaran</button>
+      <div id="bukti-msg" style="margin-top:8px"></div>`}
+    </div>` : ''}
+
     <div class="info-box">
-      <h3>📲 Langkah terakhir</h3>
-      <p>Tekan tombol di bawah untuk <strong>membuka WhatsApp</strong> dengan detail pesanan yang sudah terisi otomatis, lalu tekan kirim agar admin segera memproses pesananmu.</p>
-      <a class="btn btn-wa btn-block" href="${escapeHtml(whatsapp_url)}" target="_blank" rel="noopener">💬 Kirim Pesanan via WhatsApp</a>
-      <p class="form-hint">Catatan: tombol ini membuka WhatsApp — pesanan terkirim setelah kamu menekan tombol kirim di WhatsApp.</p>
+      <h3>💬 Butuh bantuan?</h3>
+      <p>Ada pertanyaan soal pesananmu? Hubungi admin via WhatsApp.</p>
+      <a class="btn btn-wa btn-block" href="${escapeHtml(whatsapp_url)}" target="_blank" rel="noopener">💬 Chat Admin via WhatsApp</a>
     </div>
 
     <a class="btn btn-muted btn-block" href="/katalog">← Kembali Belanja</a>`;
+
+    const btnBukti = document.getElementById('btn-bukti');
+    if (btnBukti) {
+      btnBukti.onclick = async () => {
+        const file = document.getElementById('bukti').files[0];
+        const msg = document.getElementById('bukti-msg');
+        if (!file) { msg.innerHTML = '<span style="color:#b00">Pilih file bukti dulu.</span>'; return; }
+        msg.textContent = 'Meng-upload…';
+        btnBukti.disabled = true;
+        try {
+          const fd = new FormData();
+          fd.append('file', file);
+          fd.append('phone', phone);
+          const res = await fetch('/api/orders/' + encodeURIComponent(orderNumber) + '/proof', { method: 'POST', body: fd });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Upload gagal.');
+          location.reload();
+        } catch (e) {
+          msg.innerHTML = `<span style="color:#b00">${escapeHtml(e.message)}</span>`;
+          btnBukti.disabled = false;
+        }
+      };
+    }
   } catch (e) {
     wrap.innerHTML = `<div class="alert alert-error">${escapeHtml(e.message)}</div>`;
   }

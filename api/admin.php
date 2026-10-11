@@ -37,13 +37,13 @@ if ($token === '' || $given === '' || !hash_equals($token, $given)) {
     api_error('Tidak diizinkan. Token admin salah.', 401);
 }
 
-const VALID_STATUSES = ['menunggu_konfirmasi', 'diproses', 'siap', 'selesai', 'dibatalkan'];
+const VALID_STATUSES = ['menunggu_pembayaran', 'menunggu_konfirmasi', 'diproses', 'siap', 'selesai', 'dibatalkan'];
 
 const ADMIN_PRODUCT_FIELDS = 'id, name, slug, description, category, price, image,
   stock_quantity, stock_status, is_active, is_featured, badge,
   created_at, updated_at';
 
-const EDITABLE_SETTINGS = ['shop_name', 'admin_whatsapp', 'pickup_address', 'payment_methods', 'delivery_fee'];
+const EDITABLE_SETTINGS = ['shop_name', 'admin_whatsapp', 'pickup_address', 'payment_methods', 'payment_bank_accounts', 'payment_qris_image', 'delivery_fee'];
 
 $method = api_method();
 $path = api_path('/api/admin');
@@ -101,7 +101,10 @@ if ($method === 'PATCH' && count($seg) === 3 && $seg[0] === 'orders' && ctype_di
                 );
             }
         }
-        db_exec('UPDATE orders SET status = ?, updated_at = NOW() WHERE id = ?', [$status, $order['id']]);
+        // Konfirmasi pembayaran: catat waktu bayar saat order transfer diproses
+        $paidSql = ($status === 'diproses' && $order['status'] === 'menunggu_pembayaran')
+            ? ', paid_at = NOW()' : '';
+        db_exec("UPDATE orders SET status = ?, updated_at = NOW()$paidSql WHERE id = ?", [$status, $order['id']]);
         db_exec(
             'INSERT INTO status_history (order_id, old_status, new_status) VALUES (?, ?, ?)',
             [$order['id'], $order['status'], $status]

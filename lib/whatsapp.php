@@ -30,6 +30,7 @@ const WA_GARIS = '━━━━━━━━━━━━';
 
 function status_label($s): string {
     static $labels = [
+        'menunggu_pembayaran' => 'Menunggu pembayaran',
         'menunggu_konfirmasi' => 'Menunggu konfirmasi',
         'diproses'            => 'Diproses',
         'siap'                => 'Siap diambil / sedang dikirim',

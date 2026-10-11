@@ -28,9 +28,11 @@ if ($method === 'POST' && $path === '') {
         api_error($v['errors'][0], 400, ['errors' => $v['errors']]);
     }
     $data = $v['data'];
+    // Transfer -> customer harus bayar dulu; COD -> langsung menunggu konfirmasi admin
+    $initialStatus = ($data['payment_method'] === 'Transfer') ? 'menunggu_pembayaran' : 'menunggu_konfirmasi';
 
     try {
-        $result = db_transaction(function () use ($data, $settings) {
+        $result = db_transaction(function () use ($data, $settings, $initialStatus) {
             $items = [];
             $subtotal = 0;
 
@@ -75,11 +77,11 @@ if ($method === 'POST' && $path === '') {
                 "INSERT INTO orders
                    (order_number, customer_name, customer_phone, fulfillment_method, address, notes,
                     payment_method, subtotal, delivery_fee, total, status)
-                 VALUES ('TMP', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'menunggu_konfirmasi')",
+                 VALUES ('TMP', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     $data['customer_name'], $data['customer_phone'], $data['fulfillment_method'],
                     $data['address'], $data['notes'], $data['payment_method'],
-                    $subtotal, $deliveryFee, $total,
+                    $subtotal, $deliveryFee, $total, $initialStatus,
                 ]
             );
             $orderId = $ins['lastId'];
@@ -94,8 +96,8 @@ if ($method === 'POST' && $path === '') {
                 );
             }
             db_exec(
-                "INSERT INTO status_history (order_id, old_status, new_status) VALUES (?, NULL, 'menunggu_konfirmasi')",
-                [$orderId]
+                'INSERT INTO status_history (order_id, old_status, new_status) VALUES (?, NULL, ?)',
+                [$orderId, $initialStatus]
             );
 
             return ['orderId' => $orderId, 'orderNumber' => $orderNumber];
@@ -114,6 +116,47 @@ if ($method === 'POST' && $path === '') {
     } catch (Throwable $e) {
         api_error('Terjadi kesalahan server.', 500);
     }
+}
+
+/**
+ * Upload bukti pembayaran: POST /api/orders/{orderNumber}/proof
+ * multipart/form-data: file=<gambar>, phone=<no WA pemesan>.
+ * Hanya untuk order Transfer berstatus menunggu_pembayaran.
+ */
+if ($method === 'POST' && preg_match('#^([A-Za-z0-9-]+)/proof$#', $path, $m)) {
+    $order = db_row('SELECT * FROM orders WHERE order_number = ?', [$m[1]]);
+    $phone = trim((string) ($_POST['phone'] ?? ''));
+    if (!$order || $phone === '' || $phone !== $order['customer_phone']) {
+        api_error('Pesanan tidak ditemukan.', 404);
+    }
+    if ($order['payment_method'] !== 'Transfer' || $order['status'] !== 'menunggu_pembayaran') {
+        api_error('Pesanan ini tidak membutuhkan bukti pembayaran.', 400);
+    }
+    $f = $_FILES['file'] ?? null;
+    if (!$f || ($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        api_error('File tidak diterima.', 400);
+    }
+    if ($f['size'] > 2 * 1024 * 1024) api_error('Ukuran file maksimal 2 MB.', 400);
+    $info = @getimagesize($f['tmp_name']);
+    $allowed = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_WEBP => 'webp'];
+    if (!$info || !isset($allowed[$info[2]])) {
+        api_error('File harus gambar JPG, PNG, atau WebP.', 400);
+    }
+    $dir = __DIR__ . '/../public/img/bukti';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) api_error('Gagal membuat folder bukti.', 500);
+    $name = 'bukti-' . $order['order_number'] . '-' . bin2hex(random_bytes(4)) . '.' . $allowed[$info[2]];
+    $name = preg_replace('/[^A-Za-z0-9._-]/', '', $name);
+    if (!move_uploaded_file($f['tmp_name'], $dir . '/' . $name)) {
+        api_error('Gagal menyimpan file.', 500);
+    }
+    // Hapus bukti lama bila ada (ganti upload)
+    if (!empty($order['payment_proof'])) {
+        @unlink(__DIR__ . '/../public' . $order['payment_proof']);
+    }
+    db_exec('UPDATE orders SET payment_proof = ?, updated_at = NOW() WHERE id = ?', ['/img/bukti/' . $name, $order['id']]);
+    $order = db_row('SELECT * FROM orders WHERE id = ?', [$order['id']]);
+    $order['status_label'] = status_label($order['status']);
+    json_response(['order' => $order], 201);
 }
 
 /** Detail order. Wajib ?phone= yang cocok (anti-enumerasi). */

@@ -99,22 +99,26 @@ function public_settings(): array {
         }
     }
     return [
-        'shop_name'      => get_setting('shop_name', APP_NAME),
-        'admin_whatsapp' => get_setting('admin_whatsapp', ADMIN_WHATSAPP),
-        'pickup_address' => get_setting('pickup_address', PICKUP_ADDRESS),
-        'payment_methods'=> $paymentMethods,
-        'delivery_fee'   => (int) get_setting('delivery_fee', '0'),
+        'shop_name'            => get_setting('shop_name', APP_NAME),
+        'admin_whatsapp'       => get_setting('admin_whatsapp', ADMIN_WHATSAPP),
+        'pickup_address'       => get_setting('pickup_address', PICKUP_ADDRESS),
+        'payment_methods'      => $paymentMethods,
+        'payment_bank_accounts'=> get_setting('payment_bank_accounts', ''),
+        'payment_qris_image'   => get_setting('payment_qris_image', ''),
+        'delivery_fee'         => (int) get_setting('delivery_fee', '0'),
     ];
 }
 
 /** Seed settings default bila tabel masih kosong. */
 function seed_default_settings(): void {
     $defaults = [
-        'shop_name'      => APP_NAME,
-        'admin_whatsapp' => ADMIN_WHATSAPP,
-        'pickup_address' => PICKUP_ADDRESS,
-        'payment_methods'=> json_encode(['COD', 'Transfer']),
-        'delivery_fee'   => '0',
+        'shop_name'            => APP_NAME,
+        'admin_whatsapp'       => ADMIN_WHATSAPP,
+        'pickup_address'       => PICKUP_ADDRESS,
+        'payment_methods'      => json_encode(['COD', 'Transfer']),
+        'payment_bank_accounts'=> '',
+        'payment_qris_image'   => '',
+        'delivery_fee'         => '0',
     ];
     foreach ($defaults as $k => $v) {
         if (get_setting($k, null) === null) {

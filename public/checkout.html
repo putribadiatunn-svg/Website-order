@@ -39,8 +39,10 @@ if (!items.length) {
   wrap.innerHTML = `<div class="empty"><p>Keranjang masih kosong.</p><a class="btn btn-primary" href="/katalog">Lihat Katalog</a></div>`;
 } else {
   const subtotal = items.reduce((n, i) => n + i.subtotal, 0);
-  const payOpts = (settings.payment_methods || ['COD']).map((m) =>
-    `<option value="${m}">${m}</option>`).join('');
+  const payMethods = settings.payment_methods || ['COD'];
+  const payDesc = { 'Transfer': '💳 Bayar via QRIS / transfer bank', 'COD': '💵 Bayar tunai saat terima' };
+  const payCards = payMethods.map((m, i) =>
+    `<div class="radio-card pay-card${i === 0 ? ' selected' : ''}" data-pay="${escapeHtml(m)}" role="radio" aria-checked="${i === 0}" tabindex="0">${escapeHtml(m)}<small>${payDesc[m] || ''}</small></div>`).join('');
 
   wrap.innerHTML = `
   <div class="summary-box">
@@ -77,8 +79,9 @@ if (!items.length) {
       <p>${escapeHtml(settings.pickup_address || 'Alamat pickup akan diinformasikan admin.')}</p>
     </div>
     <div class="form-group">
-      <label for="bayar">Metode Pembayaran</label>
-      <select id="bayar" name="bayar">${payOpts}</select>
+      <label>Metode Pembayaran</label>
+      <div class="radio-cards" id="pay-cards">${payCards}</div>
+      <div class="form-hint" id="pay-hint"></div>
     </div>
     <div class="form-group">
       <label for="catatan">Catatan (opsional)</label>
@@ -115,6 +118,26 @@ if (!items.length) {
   });
   refreshMethod();
 
+  let payMethod = payMethods[0] || 'COD';
+  const payCards = [...wrap.querySelectorAll('.pay-card')];
+  const payHint = wrap.querySelector('#pay-hint');
+  function refreshPay() {
+    payCards.forEach((c) => {
+      const sel = c.dataset.pay === payMethod;
+      c.classList.toggle('selected', sel);
+      c.setAttribute('aria-checked', sel ? 'true' : 'false');
+    });
+    payHint.textContent = payMethod === 'Transfer'
+      ? 'Setelah pesanan dibuat, kamu akan melihat QRIS & nomor rekening untuk membayar.'
+      : 'Bayar tunai saat pesanan diterima.';
+  }
+  payCards.forEach((c) => {
+    const pick = () => { payMethod = c.dataset.pay; refreshPay(); };
+    c.addEventListener('click', pick);
+    c.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
+  refreshPay();
+
   wrap.querySelector('#order-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const errBox = wrap.querySelector('#form-error');
@@ -129,7 +152,7 @@ if (!items.length) {
         fulfillment_method: method,
         address: wrap.querySelector('#alamat').value.trim(),
         notes: wrap.querySelector('#catatan').value.trim(),
-        payment_method: wrap.querySelector('#bayar').value,
+        payment_method: payMethod,
         items: items.map((i) => ({ product_id: i.id, quantity: i.qty })),
       };
       const { order } = await api('/api/orders', { method: 'POST', body: JSON.stringify(payload) });

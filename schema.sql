@@ -32,11 +32,13 @@ CREATE TABLE IF NOT EXISTS orders (
   address VARCHAR(500) NOT NULL DEFAULT '',
   notes VARCHAR(500) NOT NULL DEFAULT '',
   payment_method VARCHAR(50) NOT NULL DEFAULT 'COD',
+  payment_proof VARCHAR(255) NULL,
+  paid_at DATETIME NULL,
   subtotal INT NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
   delivery_fee INT NOT NULL DEFAULT 0 CHECK (delivery_fee >= 0),
   total INT NOT NULL DEFAULT 0 CHECK (total >= 0),
   status VARCHAR(30) NOT NULL DEFAULT 'menunggu_konfirmasi' CHECK (status IN (
-    'menunggu_konfirmasi','diproses','siap','selesai','dibatalkan'
+    'menunggu_pembayaran','menunggu_konfirmasi','diproses','siap','selesai','dibatalkan'
   )),
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
