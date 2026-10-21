@@ -18,7 +18,7 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_CHARSET', 'utf8mb4');
 
 // --- Aplikasi ---
-define('APP_NAME', getenv('SHOP_NAME') ?: 'Dimsum Enak');
+define('APP_NAME', getenv('SHOP_NAME') ?: 'Baramu');
 define('ADMIN_TOKEN', getenv('ADMIN_TOKEN') ?: '');
 define('ADMIN_WHATSAPP', getenv('ADMIN_WHATSAPP') ?: '');
 define('PICKUP_ADDRESS', getenv('PICKUP_ADDRESS') ?: '');

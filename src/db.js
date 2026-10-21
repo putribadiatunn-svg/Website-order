@@ -143,7 +143,7 @@ export function publicSettings() {
     }
   } catch { /* pakai default */ }
   return {
-    shop_name: getSetting('shop_name', process.env.SHOP_NAME || 'Dimsum Enak'),
+    shop_name: getSetting('shop_name', process.env.SHOP_NAME || 'Baramu'),
     admin_whatsapp: getSetting('admin_whatsapp', process.env.ADMIN_WHATSAPP || ''),
     pickup_address: getSetting('pickup_address', process.env.PICKUP_ADDRESS || ''),
     payment_methods: paymentMethods,
@@ -154,7 +154,7 @@ export function publicSettings() {
 /** Seed settings default dari .env bila tabel masih kosong. */
 export function seedDefaultSettings() {
   const defaults = {
-    shop_name: process.env.SHOP_NAME || 'Dimsum Enak',
+    shop_name: process.env.SHOP_NAME || 'Baramu',
     admin_whatsapp: process.env.ADMIN_WHATSAPP || '',
     pickup_address: process.env.PICKUP_ADDRESS || '',
     payment_methods: JSON.stringify(['COD', 'Transfer']),

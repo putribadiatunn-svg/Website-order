@@ -43,7 +43,7 @@ Ulangi dari nol: `npm run reset-db` (hapus `data/shop.db` + seed ulang).
 | `PORT` | – | `3000` | Port server |
 | `ADMIN_TOKEN` | Ya | string acak 64 char | Token halaman `/admin` (header `x-admin-token`) |
 | `ADMIN_WHATSAPP` | Ya | `6281234567890` | Nomor WA admin untuk notifikasi & tombol tanya |
-| `SHOP_NAME` | – | `Dimsum Enak` | Nama toko |
+| `SHOP_NAME` | – | `Baramu` | Nama toko |
 | `PICKUP_ADDRESS` | – | `Jl. …` | Alamat pickup |
 | `DATA_DIR` | – | `./data` | Folder database SQLite |
 

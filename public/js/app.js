@@ -25,7 +25,7 @@ export async function loadSettings() {
     const d = await api('/api/settings/public');
     _settings = d.settings;
   } catch {
-    _settings = { shop_name: 'Dimsum Enak', admin_whatsapp: '', pickup_address: '', payment_methods: ['COD'], delivery_fee: 0, whatsapp_link: '' };
+    _settings = { shop_name: 'Baramu', admin_whatsapp: '', pickup_address: '', payment_methods: ['COD'], delivery_fee: 0, whatsapp_link: '' };
   }
   return _settings;
 }
